@@ -1,0 +1,47 @@
+name: Test Matrix
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+jobs:
+  smoke-tests:
+    name: Multi-OS Smoke Tests
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate Package Structure
+        run: |
+          test -f package.json
+          test -d skills
+          echo "Found $(ls -1 skills | wc -l) skills."
+
+      - name: Run Antigravity Tool Tests
+        run: |
+          bash tests/antigravity/test-antigravity-tools.sh
+          bash tests/antigravity/test-logo.sh
+
+      - name: Run Claude Code Skill Unit Tests
+        run: |
+          # Run tests that do not require external Claude CLI authentication
+          if [ -f tests/claude-code/test-executing-plans-scripts.sh ]; then
+            bash tests/claude-code/test-executing-plans-scripts.sh
+          fi
+          if [ -f tests/claude-code/test-helpers.sh ]; then
+            bash tests/claude-code/test-helpers.sh
+          fi
