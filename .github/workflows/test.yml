@@ -1,0 +1,43 @@
+name: Test Matrix
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+jobs:
+  smoke-tests:
+    name: Multi-OS Smoke Tests
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Validate Package Structure
+        run: |
+          test -f package.json
+          test -d skills
+          echo "Found $(ls -1 skills | wc -l) skills."
+
+      - name: Run Antigravity Tool Tests
+        run: |
+          bash tests/antigravity/test-antigravity-tools.sh
+          bash tests/antigravity/test-logo.sh
+
+      - name: Run Claude Code Skill Tests
+        run: |
+          if [ -f tests/claude-code/run-skill-tests.sh ]; then
+            bash tests/claude-code/run-skill-tests.sh
+          fi
