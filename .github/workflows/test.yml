@@ -36,8 +36,12 @@ jobs:
           bash tests/antigravity/test-antigravity-tools.sh
           bash tests/antigravity/test-logo.sh
 
-      - name: Run Claude Code Skill Tests
+      - name: Run Claude Code Skill Unit Tests
         run: |
-          if [ -f tests/claude-code/run-skill-tests.sh ]; then
-            bash tests/claude-code/run-skill-tests.sh
+          # Run tests that do not require external Claude CLI authentication
+          if [ -f tests/claude-code/test-executing-plans-scripts.sh ]; then
+            bash tests/claude-code/test-executing-plans-scripts.sh
+          fi
+          if [ -f tests/claude-code/test-helpers.sh ]; then
+            bash tests/claude-code/test-helpers.sh
           fi
