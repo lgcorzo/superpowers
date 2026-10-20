@@ -185,8 +185,17 @@ h1 { color: #333; } p { color: #666; } code { background: #f0f0f0; padding: 0.1e
 <p>This page needs the full URL your coding agent gave you, including the
 <code>?key=&hellip;</code> part. Copy the complete URL and open it again.</p></body></html>`;
 
+function sanitizeForScript(value) {
+  return JSON.stringify(String(value))
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029');
+}
+
 function bootstrapPage(key) {
-  const jsonKey = JSON.stringify(String(key));
+  const jsonKey = sanitizeForScript(key);
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><title>Opening Brainstorm Companion</title></head>
@@ -370,6 +379,7 @@ function securityHeaders(headers = {}) {
     'X-Frame-Options': 'DENY',
     'Content-Security-Policy': "frame-ancestors 'none'",
     'Cross-Origin-Resource-Policy': 'same-origin',
+    'X-Content-Type-Options': 'nosniff',
     ...headers
   };
 }
@@ -402,7 +412,7 @@ function handleRequest(req, res) {
   const keyFromQuery = queryKey(req.url);
   if (req.method === 'GET' && pathname === '/' && keyFromQuery && timingSafeEqualStr(keyFromQuery, TOKEN)) {
     res.writeHead(200, securityHeaders({ 'Content-Type': 'text/html; charset=utf-8' }));
-    res.end(bootstrapPage(keyFromQuery));
+    res.end(bootstrapPage(TOKEN));
   } else if (req.method === 'GET' && pathname === '/') {
     const screenFile = getNewestScreen();
     let html = screenFile
@@ -423,7 +433,7 @@ function handleRequest(req, res) {
     // Reject empty/dotfile names and anything that isn't a regular file —
     // `/files/` would otherwise resolve to CONTENT_DIR and crash readFileSync (EISDIR).
     if (!fileName || fileName.startsWith('.') || !isRegularFileInsideContentDir(filePath)) {
-      res.writeHead(404, securityHeaders());
+      res.writeHead(404, securityHeaders({ 'Content-Type': 'text/plain; charset=utf-8' }));
       res.end('Not found');
       return;
     }
@@ -432,7 +442,7 @@ function handleRequest(req, res) {
     res.writeHead(200, securityHeaders({ 'Content-Type': contentType }));
     res.end(fs.readFileSync(filePath));
   } else {
-    res.writeHead(404, securityHeaders());
+    res.writeHead(404, securityHeaders({ 'Content-Type': 'text/plain; charset=utf-8' }));
     res.end('Not found');
   }
 }

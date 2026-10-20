@@ -30,7 +30,8 @@ const EXPECTED_SECURITY_HEADERS = {
   'cache-control': 'no-store',
   'x-frame-options': 'DENY',
   'content-security-policy': "frame-ancestors 'none'",
-  'cross-origin-resource-policy': 'same-origin'
+  'cross-origin-resource-policy': 'same-origin',
+  'x-content-type-options': 'nosniff'
 };
 
 function cleanup() {
@@ -197,6 +198,20 @@ async function runTests() {
         });
       });
       assert.deepStrictEqual(replacements, ['/']);
+    });
+
+    await test('bootstrap page escapes HTML and script injection characters', async () => {
+      const res = await get('/', { key: TOKEN });
+      assert.strictEqual(res.status, 200);
+      assert(!res.body.includes('</script><script>'), 'bootstrap should not contain unescaped script tag sequences');
+    });
+
+    await test('404 responses return explicit text/plain Content-Type', async () => {
+      const res = await get('/nonexistent');
+      assert.strictEqual(res.status, 403); // without key is 403
+      const authed404 = await get('/nonexistent', { cookie: `${COOKIE_NAME}=${TOKEN}` });
+      assert.strictEqual(authed404.status, 404);
+      assert.strictEqual(authed404.headers['content-type'], 'text/plain; charset=utf-8');
     });
 
     await test('HTML responses include leak-reduction and anti-framing headers', async () => {
